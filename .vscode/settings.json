@@ -1,0 +1,8 @@
+{
+    "editor.wordWrapColumn": 80,
+    "code-runner.executorMap": {
+        "c": "cd $workspaceRoot && make"
+    },
+    "code-runner.customCommand": "$workspaceRoot\\test\\testRunners.bat",
+    "code-runner.saveFileBeforeRun": true
+}
