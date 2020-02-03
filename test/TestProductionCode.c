@@ -7,21 +7,19 @@ TEST_GROUP(ProductionCode);
 //sometimes you may want to get at local data in a module.
 //for example: If you plan to pass by reference, this could be useful
 //however, it should often be avoided
-extern int Counter;
+
 
 TEST_SETUP(ProductionCode) {
-  //This is run before EACH TEST
-  Counter = 0x5a5a;
 }
 
 TEST_TEAR_DOWN(ProductionCode) {
 }
 
-TEST(ProductionCode, FunctionWhichReturnsLocalVariable_ShouldReturnTheCurrentCounterValue) {
+TEST(ProductionCode, sum_ShouldReturnTheSumOfTwoIntegersParams) {
     //This should be true because setUp set this up for us before this test
-    TEST_ASSERT_EQUAL_HEX(0x5a5a, FunctionWhichReturnsLocalVariable());
+    int a = 10,
+      b = 20,
+      expected = 30;
 
-    //This should be true because we can still change our answer
-    Counter = 0x1234;
-    TEST_ASSERT_EQUAL_HEX(0x1234, FunctionWhichReturnsLocalVariable());
+    TEST_ASSERT_EQUAL_INT(expected, sum(a, b));
 }
