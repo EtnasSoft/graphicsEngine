@@ -14,16 +14,16 @@ CFLAGS += -Wno-unknown-pragmas
 CFLAGS += -Wstrict-prototypes
 CFLAGS += -Wundef
 CFLAGS += -Wold-style-definition
+CFLAGS += -g
 
 SRC_FILES1=\
   src/main.c \
-  src/ProductionCode.c \
-  src/ProductionCode2.c
+  src/ProductionCode.c
 
 TARGET_BASE1=myProject
 TARGET_EXTENSION=.exe
 TARGET1 = $(TARGET_BASE1)$(TARGET_EXTENSION)
 
 default:
-	$(C_COMPILER) $(CFLAGS) $(SRC_FILES1) -o $(TARGET1)
+	$(C_COMPILER) -g $(CFLAGS) $(SRC_FILES1) -o $(TARGET1)
 	- ./$(TARGET1) -v
