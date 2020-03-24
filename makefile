@@ -18,7 +18,8 @@ CFLAGS += -g
 
 SRC_FILES1=\
   src/main.c \
-  src/ProductionCode.c
+  lib/conio/conio.h \
+  lib/conio/conio.c
 
 TARGET_BASE1=myProject
 TARGET_EXTENSION=.exe
