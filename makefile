@@ -25,6 +25,17 @@ TARGET_BASE1=myProject
 TARGET_EXTENSION=.exe
 TARGET1 = $(TARGET_BASE1)$(TARGET_EXTENSION)
 
-default:
+SRC_FILES2=\
+  src/sdl-test.c
+
+TARGET_BASE2=sdlTest
+TARGET_EXTENSION=.exe
+TARGET2 = $(TARGET_BASE2)$(TARGET_EXTENSION)
+
+default2:
 	$(C_COMPILER) -g $(CFLAGS) $(SRC_FILES1) -o $(TARGET1)
 	- ./$(TARGET1) -v
+
+default:
+	$(C_COMPILER) -g $(CFLAGS) $(SRC_FILES2) -o $(TARGET2)
+	- ./$(TARGET2) -v

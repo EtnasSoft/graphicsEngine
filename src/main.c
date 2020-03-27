@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 
+
 // TYPEDEFS
 // ////////////////////////////////////////////////////////////////////
 typedef uint8_t byte;
@@ -118,10 +119,9 @@ int main(void) {
   cls();
   c_textcolor(11); // Light cyan color :)
 
-
   // Init the screen position and load the tilemap accordingly
-  iScrollX = 144;
-  iScrollY = 0;
+  iScrollX = 8;
+  iScrollY = 16;
   reloadPlayField();
 
   DrawPlayfield(iScrollX, iScrollY);
@@ -134,7 +134,7 @@ int main(void) {
     if (ch == 27)
       k = 1;
 
-    printf("\n%i\n", ch);
+    //printf("\n%i\n", ch);
 
     if (ch == 91 && k == 1)
       k = 2;
@@ -174,12 +174,13 @@ int main(void) {
       k = 0;
     }
 
+    // Limits
     if (flag) {
       if (iScrollX >= TILEMAP_MAX_WIDTH_SCROLL) {
         iScrollX = 0;
         reloadPlayField();
       } else if (iScrollX < 0) {
-        iScrollX = 0; //TILEMAP_MAX_WIDTH_SCROLL;
+        iScrollX = TILEMAP_MAX_WIDTH_SCROLL;
         reloadPlayField();
       }
 
@@ -190,6 +191,8 @@ int main(void) {
         iScrollY = TILEMAP_MAX_HEIGHT_SCROLL;
         reloadPlayField();
       }
+
+      flag = 0;
 
       cls();
       DrawPlayfield(iScrollX, iScrollY);
@@ -240,8 +243,8 @@ void DrawPlayfield(uint16_t bScrollX, uint16_t bScrollY) {
   printf("\nSCREEN REPRESENTATION:\n----------------------\n\n");
 #endif
 
-  //adjustPlayFieldRows();
-  //adjustPlayFieldCols();
+  adjustPlayFieldRows();
+  adjustPlayFieldCols();
 
   // draw the 8 rows
   for (y = 0; y < VIEWPORT_HEIGHT; y++) {
@@ -403,7 +406,7 @@ void reloadPlayField(void) {
       }
 
       /*printf("nextPlayFieldByte: %3i, nextTileByte from: %3i\n",
-    nextPlayFieldByte, nextTileByte);*/
+          nextPlayFieldByte, nextTileByte);*/
     }
   }
 }
@@ -411,63 +414,98 @@ void reloadPlayField(void) {
 void adjustPlayFieldRows(void) {
   int currentRow = iScrollY >> 3,
     currentCol = iScrollX >> 3,
-    initPlayFieldRow = ((currentRow + (EDGES / 2)) % PLAYFIELD_HEIGHT),
-    initPlayFieldCol = (currentCol + (EDGES / 2)) % PLAYFIELD_WIDTH,
-    prevPlayFieldRow = initPlayFieldRow == 0 ? PLAYFIELD_HEIGHT : initPlayFieldRow - 1,
-    nextPlayFieldRow = (initPlayFieldRow + VIEWPORT_HEIGHT) % PLAYFIELD_HEIGHT,
-    prevPlayFieldStart = prevPlayFieldRow * PLAYFIELD_WIDTH,
-    nextPlayFieldStart = nextPlayFieldRow * PLAYFIELD_WIDTH;
+    offsetCol = currentCol % PLAYFIELD_WIDTH,
+    offsetRow = currentRow % PLAYFIELD_HEIGHT,
 
-  for (byte x = 0; x < PLAYFIELD_WIDTH; x++) {
-    memcpy(&bPlayfield[prevPlayFieldStart++], &tileMap[7], 1);
-    memcpy(&bPlayfield[nextPlayFieldStart++], &tileMap[7], 1);
+    prevPlayFieldRow = (offsetRow == 0 ? PLAYFIELD_HEIGHT : offsetRow) - 1,
+    nextPlayFieldRow = (offsetRow + VIEWPORT_HEIGHT) % PLAYFIELD_HEIGHT,
+    prevPlayFieldByte = prevPlayFieldRow * PLAYFIELD_WIDTH,
+    nextPlayFieldByte = nextPlayFieldRow * PLAYFIELD_WIDTH;
+
+  // Tiles
+  // Use the fact that 32 * x = x << 5
+  int prevTileRow = prevTileRow = ((currentRow == 0 ? TILEMAP_HEIGHT : currentRow) - 1) << 5,
+    nextTileRow = ((currentRow + VIEWPORT_HEIGHT) % TILEMAP_HEIGHT) << 5,
+    nextTileByte,
+    prevTileByte,
+    carry;
+
+  if (prevPlayFieldByte >= PLAYFIELD_SIZE) {
+      prevPlayFieldByte -= PLAYFIELD_SIZE;
   }
 
-    printf("initPlayFieldRow: %3i, initPlayFieldCol: %3i, prevPlayFieldRow: %3i, nextPlayFieldRow: %3i\n",
-      initPlayFieldRow, initPlayFieldCol, prevPlayFieldRow, nextPlayFieldRow);
+  if (nextPlayFieldByte >= PLAYFIELD_SIZE) {
+      nextPlayFieldByte -= PLAYFIELD_SIZE;
+  }
+
+  prevPlayFieldByte += offsetCol;
+  nextPlayFieldByte += offsetCol;
+
+  // printf("prevPlayFieldByte: %3i nextPlayFieldByte: %3i\n", prevPlayFieldByte, nextPlayFieldByte);
+  // printf("prevTileRow: %3i, nextTileRow: %3i\n\n", prevTileRow, nextTileRow);
+
+  for (byte x = 0; x < PLAYFIELD_WIDTH; x++) {
+    carry = currentCol + x;
+    nextTileByte = (nextTileRow + (carry % TILEMAP_WIDTH));
+    prevTileByte = (prevTileRow + (carry % TILEMAP_WIDTH));
+
+    // printf("prevTileByte %3i, nextTileByte: %3i\n", prevTileByte, nextTileByte);
+
+    memcpy(&bPlayfield[prevPlayFieldByte++], &tileMap[prevTileByte++], 1);
+    memcpy(&bPlayfield[nextPlayFieldByte++], &tileMap[nextTileByte++], 1);
+
+    if (nextPlayFieldByte % PLAYFIELD_WIDTH == 0) {
+      prevPlayFieldByte -= PLAYFIELD_WIDTH;
+      nextPlayFieldByte -= PLAYFIELD_WIDTH;
+    }
+
+    if (nextTileByte % TILEMAP_WIDTH == 0) {
+      prevTileByte -= TILEMAP_WIDTH;
+      nextTileByte -= TILEMAP_WIDTH;
+    }
+  }
 }
 
 void adjustPlayFieldCols(void) {
   byte currentRow = iScrollY >> 3,
-    currentCol = iScrollX >> 3;
+    currentCol = iScrollX >> 3,
+    offsetRow = currentRow % PLAYFIELD_HEIGHT,
+    offsetCol = currentCol % PLAYFIELD_WIDTH,
+    currentPlayFieldByte = offsetRow * PLAYFIELD_WIDTH;
 
-  int nextCol = (currentCol + VIEWPORT_WIDTH) % PLAYFIELD_WIDTH,
-    prevCol = (currentCol - 1) % PLAYFIELD_WIDTH,
-    nextTilesByte,
-    prevTilesByte;
+  // Use the fact that 32 * x = x << 5
+  int nextTileByte,
+    prevTileByte,
+    currentTileByte = currentRow << 5,
+    nextPlayFieldByte = currentPlayFieldByte + ((offsetCol + VIEWPORT_WIDTH) % PLAYFIELD_WIDTH),
+    prevPlayFieldByte = offsetCol == 0
+      ? currentPlayFieldByte + PLAYFIELD_WIDTH - 1
+      : currentPlayFieldByte + (offsetCol - 1);
 
-  if (prevCol < 0) {
-    prevCol += PLAYFIELD_WIDTH;
+  if (prevPlayFieldByte < 0) {
+    prevPlayFieldByte += PLAYFIELD_WIDTH;
   }
 
-  nextTilesByte = ((currentCol + VIEWPORT_WIDTH) % TILEMAP_WIDTH) * TILEMAP_HEIGHT;
-  prevTilesByte = currentCol - 1;
+  nextTileByte = currentTileByte + ((currentCol + VIEWPORT_WIDTH) % TILEMAP_WIDTH);
+  prevTileByte = currentCol == 0
+    ? currentTileByte + PLAYFIELD_WIDTH - 1
+    : currentTileByte + (currentCol -1);
 
-  printf("\nPREVCOL: %3i NEXTCOL: %3i\n", prevCol, nextCol);
-
-  if (prevTilesByte < 0) {
-    prevTilesByte += TILEMAP_WIDTH;
-  }
-
-  prevTilesByte *= TILEMAP_HEIGHT;
+  printf("currentPlayFieldByte: %3i, prevPlayFieldByte: %3i nextPlayFieldByte: %3i\n",
+    currentPlayFieldByte, prevPlayFieldByte, nextPlayFieldByte);
+  printf("currentTileByte: %3i, nextTileByte: %3i, prevTileByte: %3i\n",
+    currentTileByte, nextTileByte, prevTileByte);
 
   for (byte x = 0; x < PLAYFIELD_HEIGHT; x++) {
-    memcpy(&bPlayfield[nextCol], &tileMap[7], 1);
-    memcpy(&bPlayfield[prevCol], &tileMap[0], 1);
+    memcpy(&bPlayfield[nextPlayFieldByte], &tileMap[nextTileByte], 1);
+    memcpy(&bPlayfield[prevPlayFieldByte], &tileMap[prevTileByte], 1);
 
-    printf("nextTilesByte: %03i, prevCol: %3i %s nextCol: %3i %s \n",
-      nextTilesByte, prevCol,
-      tileMap[prevTilesByte] == 1 ? FILL : BLANK,
-      nextCol,
-      tileMap[nextTilesByte] == 1 ? FILL : BLANK);
-
-    nextCol = (nextCol + PLAYFIELD_WIDTH) % PLAYFIELD_SIZE;
-    prevCol = (prevCol + PLAYFIELD_WIDTH) % PLAYFIELD_SIZE;
-    nextTilesByte = (nextTilesByte + TILEMAP_WIDTH) % TILEMAP_SIZE;
-    prevTilesByte = (prevTilesByte + TILEMAP_WIDTH) % TILEMAP_SIZE;
+    nextPlayFieldByte = (nextPlayFieldByte + PLAYFIELD_WIDTH) % PLAYFIELD_SIZE;
+    prevPlayFieldByte = (prevPlayFieldByte + PLAYFIELD_WIDTH) % PLAYFIELD_SIZE;
+    nextTileByte = (nextTileByte + TILEMAP_WIDTH) % TILEMAP_SIZE;
+    prevTileByte = (prevTileByte + TILEMAP_WIDTH) % TILEMAP_SIZE;
   }
 }
-
 
 // DEMO ROUTINES
 // ////////////////////////////////////////////////////////////////////
